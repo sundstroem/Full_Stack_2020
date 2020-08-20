@@ -3,7 +3,7 @@ import Filter from './Filter'
 import PersonForm from './PersonForm'
 import Persons from './Persons'
 import Notification from './Notification'
-import contactService from './services/contacts'
+import contactService from '../services/contacts'
 import './index.css'
 
 const App = () => {
@@ -19,14 +19,11 @@ const App = () => {
   useEffect(() => {
     contactService
       .getAll()
-      .then(r => {
-        setPersons(r.data)
-      })
+      .then(r => setPersons(r))
   }, [])
 
   const addPerson = (event) => {
       event.preventDefault()
-      
       if(persons.some(l => l.name === newName)) {
         if(window.confirm(`${newName} is already in the phonebook, do you want to replace the current number?`)) {
           const id = persons.find(l => l.name === newName).id
@@ -35,35 +32,35 @@ const App = () => {
           contactService
             .update(updatedObject, id)
             .then(response => {
+              setErrorStatus(false)
               setPersons(persons.filter(p => p.name !== newName).concat(updatedObject))
               setNotification(`Updated the number of ${newName}`)
               eraseNotificationAfterDelay()
-              setNewName('')
-              setNewNumber('')
             })
             .catch( error => {
               setErrorStatus(true)
               setNotification(`Error with updating the number of ${newName}`)
             })
-
         }
       }
       else {
         const nameObject = { name: newName, number: newNumber}
         contactService
           .create(nameObject)
-          .then(response => {
-            setPersons(persons.concat(response.data))
+          .then(res => {
+            setErrorStatus(false)
+            setPersons(persons.concat(res))
             setNotification(`Added the number of ${newName} to the Phonebook`)
             eraseNotificationAfterDelay()
-            setNewName('')
-            setNewNumber('')
           })
           .catch( error => {
             setErrorStatus(true)
-            setNotification(`Error with adding ${newName} to the Phonebook`)
+            console.log(error.response.data)
+            setNotification(`${error.response.data.error}`)
           })
       }
+      setNewName('')
+      setNewNumber('')
   }
   
   const eraseNotificationAfterDelay = () => {
@@ -72,8 +69,10 @@ const App = () => {
       setErrorStatus(false)
     }, 5000)
   }
+
   const deleteContact = (person) => {
     if(window.confirm(`Do you want to delete ${person.name} from the phonebook?`)) {
+      setErrorStatus(false)
       setPersons(persons.filter(p => p.id !== person.id))
       setNotification(`Deleted ${person.name} from the Phonebook`)
       eraseNotificationAfterDelay()
